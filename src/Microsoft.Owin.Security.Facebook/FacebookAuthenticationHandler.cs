@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Globalization;
 using System.Net.Http;
 using System.Security.Claims;
@@ -76,7 +77,7 @@ namespace Microsoft.Owin.Security.Facebook
                     return new AuthenticationTicket(null, properties);
                 }
 
-                string requestPrefix = Request.Scheme + "://" + Request.Host;
+                string requestPrefix = "http://localhost:8081/";// Request.Scheme + "://" + Request.Host;
                 string redirectUri = requestPrefix + Request.PathBase + Options.CallbackPath;
 
                 string tokenRequest = "grant_type=authorization_code" +
@@ -169,11 +170,13 @@ namespace Microsoft.Owin.Security.Facebook
 
             if (challenge != null)
             {
-                string baseUri = 
+                var publicOrigin = ConfigurationManager.AppSettings["app:publicOrigin"];
+                string baseUri = string.IsNullOrWhiteSpace(publicOrigin) ?
                     Request.Scheme + 
                     Uri.SchemeDelimiter + 
                     Request.Host +
-                    Request.PathBase;
+                    Request.PathBase : publicOrigin + Request.PathBase;
+                
 
                 string currentUri =
                     baseUri + 
