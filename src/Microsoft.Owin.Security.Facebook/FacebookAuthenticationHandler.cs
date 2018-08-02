@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -77,9 +78,10 @@ namespace Microsoft.Owin.Security.Facebook
                     return new AuthenticationTicket(null, properties);
                 }
 
-                string requestPrefix = "http://localhost:8081/";// Request.Scheme + "://" + Request.Host;
+                var publicOrigin = ConfigurationManager.AppSettings["app:publicOrigin"];
+                string requestPrefix = string.IsNullOrWhiteSpace(publicOrigin) ? Request.Scheme + "://" + Request.Host : publicOrigin;
                 string redirectUri = requestPrefix + Request.PathBase + Options.CallbackPath;
-
+                
                 string tokenRequest = "grant_type=authorization_code" +
                     "&code=" + Uri.EscapeDataString(code) +
                     "&redirect_uri=" + Uri.EscapeDataString(redirectUri) +
@@ -87,8 +89,23 @@ namespace Microsoft.Owin.Security.Facebook
                     "&client_secret=" + Uri.EscapeDataString(Options.AppSecret);
 
                 HttpResponseMessage tokenResponse = await _httpClient.GetAsync(Options.TokenEndpoint + "?" + tokenRequest, Request.CallCancelled);
+                
                 tokenResponse.EnsureSuccessStatusCode();
-                string text = await tokenResponse.Content.ReadAsStringAsync();
+
+                string text;
+                //var contenttype = tokenResponse.Content.Headers.First(h => h.Key.Equals("Content-Type"));
+                //var rawencoding = contenttype.Value.First();
+
+                //if (rawencoding.Contains("utf8") || rawencoding.Contains("UTF-8"))
+                //{
+                var bytes = await tokenResponse.Content.ReadAsByteArrayAsync();
+                text = Encoding.UTF8.GetString(bytes);
+                /*}
+                else
+                {
+                    text = await tokenResponse.Content.ReadAsStringAsync();
+                }*/
+
                 JObject response = JObject.Parse(text);
 
                 string accessToken = response.Value<string>("access_token");
